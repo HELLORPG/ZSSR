@@ -5,6 +5,7 @@ import torch
 
 from Config import CONFIG
 import os
+import random
 
 
 def read_image(filepath: str) -> np.ndarray:
@@ -76,13 +77,127 @@ def show_ndarray_image(im):
     return
 
 
+def get_hr_father(im: np.ndarray, min_size: int, scale_factor) -> np.ndarray:
+    """
+    对输入的图像进行下采样，获得论文中的HR-Father
+    :param im: 输入的图像(h,w,c)
+    :param min_size: 输出图像的最小尺寸
+    :return:
+    """
+    # print(im.shape)
+
+    # 获得一个降采样的因子
+    # TODO 这里应该会有更好的采样方式，原论文中强调，这里原文中强调，约接近原图大小的HR-Father将更有概率被选中，也即是一个不均匀的采样，而我这里的采样是均匀的，其实是有一定的偏差的。
+    downsample_factor = random.uniform(0.8, 1.0)
+
+    h, w = im.shape[0], im.shape[1]
+    h1, w1 = round(h * downsample_factor), round(w * downsample_factor)
+
+    if h1 < min_size * scale_factor or w1 < min_size * scale_factor:
+        # 进行修正，这样的系数是不行的
+        if h < w:
+            # 此时的修正以h为主
+            downsample_factor = min_size * scale_factor / h
+        else:
+            downsample_factor = min_size * scale_factor / w
+
+    h1, w1 = round(h * downsample_factor), round(w * downsample_factor)
+    # print(h1, w1)
+
+    hr_father = cv2.resize(im, dsize=(w1, h1), interpolation=cv2.INTER_CUBIC)   # 这个函数非常奇怪，反而又是以(w,h)作为尺寸的格式了
+
+    return hr_father
+
+
+def get_train_images(im: np.ndarray, size: int, scale_factor):
+    """
+    通过一张输入图像，获得数据增强之后的网络训练输入图像群（8张）
+    :param im: 输入的一张图像，应该是一张
+    :param size: 最终输入网络的图像尺寸
+    :return:
+    """
+    hr_fathers = []
+
+    hr_father = get_hr_father(im, size, scale_factor)
+
+    # HR-Father拷贝成为八份
+    for i in range(0, 8):
+        hr_fathers.append(hr_father.copy())
+
+    # 进行旋转翻转等变换
+    for i in range(0, 8):
+        hr_fathers[i] = np.rot90(hr_fathers[i], int(i/2))
+        if i % 2 == 1:
+            hr_fathers[i] = np.flipud(hr_fathers[i])
+
+    # 对HR-Fathers进行裁剪
+    for i in range(0, 8):
+        hr = hr_fathers[i]
+        h, w = hr.shape[0], hr.shape[1]
+        crop_size = size * scale_factor
+        h1, w1 = h - crop_size, w - crop_size
+        crop_h = random.randint(0, h1)
+        crop_w = random.randint(0, w1)
+
+        hr_fathers[i] = hr[crop_h:crop_h+crop_size, crop_w:crop_w+crop_size, ...]
+
+    # for hr in hr_fathers:
+    #     show_ndarray_image(hr)
+    # show_ndarray_image(hr_fathers[1])
+
+    lr_sons = []
+
+    for hr_father in hr_fathers:
+        lr_son = cv2.resize(hr_father, dsize=(size, size), interpolation=cv2.INTER_CUBIC)
+        lr_sons.append(lr_son)
+
+    # show_ndarray_image(lr_sons[0])
+
+    for i in range(0, 8):
+        hr_fathers[i] = hr_fathers[i].reshape((1, hr_fathers[i].shape[0], hr_fathers[i].shape[1], hr_fathers[i].shape[2]))
+        lr_sons[i] = lr_sons[i].reshape((1, lr_sons[i].shape[0], lr_sons[i].shape[1], lr_sons[i].shape[2]))
+
+    lr_data = np.vstack((
+        lr_sons[0],
+        lr_sons[1],
+        lr_sons[2],
+        lr_sons[3],
+        lr_sons[4],
+        lr_sons[5],
+        lr_sons[6],
+        lr_sons[7]
+    ))
+
+    hr_data = np.vstack((
+        hr_fathers[0],
+        hr_fathers[1],
+        hr_fathers[2],
+        hr_fathers[3],
+        hr_fathers[4],
+        hr_fathers[5],
+        hr_fathers[6],
+        hr_fathers[7]
+    ))
+
+    return ndarray2tensor(lr_data), ndarray2tensor(hr_data)
+
+
 if __name__ == '__main__':
     config = CONFIG()
     test_image_path = os.path.join(config.BSDS100xN_PATH[2], "img_001_SRF_2_LR.png")
     image = read_image(test_image_path)
     print(type(image), image.shape)
 
-    print(get_all_filenames_in_dir(config.BSDS100xN_PATH[2]))
+    # print(get_all_filenames_in_dir(config.BSDS100xN_PATH[2]))
 
     image = read_BSDS100(config.BSDS100xN_PATH[2], 21, "LR")
-    print(image.shape)
+
+    # ds_image = get_hr_father(image, 64, 2)
+    #
+    # show_ndarray_image(image)
+    # show_ndarray_image(ds_image)
+    # random.seed(100)
+    lr, hr = get_train_images(image, 64, 2)
+    print(lr.shape)
+
+    # print(image.shape)

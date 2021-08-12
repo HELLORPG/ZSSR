@@ -43,6 +43,9 @@ class SRModel(nn.Module):
 
         self.device =  config.DEVICE
 
+        # 数据的设置
+        self.input_size = config.NET_IMAGE_SIZE
+
         self.to(self.device)
 
 
@@ -93,7 +96,11 @@ class SRModel(nn.Module):
 
             # 进行正常的训练过程
             epoch += 1
-            self._train(lr_im, hr_im, epoch)
+
+            # 获得训练需要使用的数据
+            lr_data, hr_data = DataOp.get_train_images(lr_im, self.input_size, self.scale_factor)
+
+            self._train(lr_data.to(self.device), hr_data.to(self.device), epoch)
 
 
 
@@ -136,10 +143,13 @@ if __name__ == '__main__':
     lr_image = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], 21, "LR")
     hr_image = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], 21, "HR")
 
-    lr_image = lr_image.reshape((1, lr_image.shape[0], lr_image.shape[1], lr_image.shape[2]))
-    hr_image = hr_image.reshape((1, hr_image.shape[0], hr_image.shape[1], hr_image.shape[2]))
+    # lr_image = lr_image.reshape((1, lr_image.shape[0], lr_image.shape[1], lr_image.shape[2]))
+    # hr_image = hr_image.reshape((1, hr_image.shape[0], hr_image.shape[1], hr_image.shape[2]))
 
     model = SRModel(config)
 
-    model.train_net(DataOp.ndarray2tensor(lr_image).to(model.device), DataOp.ndarray2tensor(hr_image).to(model.device))
+    # lr_images, hr_images = DataOp.get_train_images(lr_image, config.NET_IMAGE_SIZE, config.SCALE_FACTOR)
+    # print(lr_images.shape)
+
+    model.train_net(lr_image, hr_image)
 
