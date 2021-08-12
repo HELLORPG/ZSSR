@@ -3,6 +3,8 @@ import torch.nn as nn
 from Config import CONFIG
 import DataOp
 import numpy as np
+import cv2
+from PIL import Image
 
 
 class SRModel(nn.Module):
@@ -27,6 +29,23 @@ class SRModel(nn.Module):
         self.layer7 = ConvLayer(in_channels=64, out_channels=64, kernel_size=5, padding_mode="zero", stride=1, has_relu=True)
         self.layer8 = ConvLayer(in_channels=64, out_channels=3, kernel_size=5, padding_mode="zero", stride=1, has_relu=False)
 
+        # Loss函数
+        self.loss_func = nn.L1Loss()
+
+        # 定义网络的优化器
+        self.optim = torch.optim.Adam(self.parameters(), lr=config.LEARN_RATE, weight_decay=config.WEIGHT_DECAY)
+
+        # Something Else
+        self.init_epoch = config.INIT_EPOCH
+        self.current_lr = config.LEARN_RATE
+        self.min_lr = config.MIN_LR
+        self.print_train_epoch = config.PRINT_TRAIN_EPOCH
+
+        self.device =  config.DEVICE
+
+        self.to(self.device)
+
+
     def forward(self, input):
         output = self.upsample(input)
 
@@ -48,6 +67,35 @@ class SRModel(nn.Module):
 
         # 返回
         return output
+
+    def _train(self, lr_im, hr_im, epoch):
+        self.optim.zero_grad()
+
+        sr_output = self.forward(lr_im)
+        loss = self.loss_func(sr_output, hr_im)
+        loss.backward()
+
+        self.optim.step()
+
+        if self.print_train_epoch:
+            print(">>>> Train Epoch %d, Loss=%f, Lr=%f" % (epoch, loss, self.current_lr))
+
+        return
+
+    def train_net(self, lr_im, hr_im):
+        # ZSSR网络使用的训练并不是固定Epoch的，而是以训练过程中的lr动态调整作为判定依据的
+        # 如果在lr的动态递减过程中，lr低于某一个值，则停止学习
+        epoch = self.init_epoch
+        while True:
+            self.current_lr = self.optim.state_dict()['param_groups'][0]['lr']   # 获取当前的学习率
+            if self.current_lr < self.min_lr:
+                break
+
+            # 进行正常的训练过程
+            epoch += 1
+            self._train(lr_im, hr_im, epoch)
+
+
 
 
 class ConvLayer(nn.Module):
@@ -85,22 +133,13 @@ class ConvLayer(nn.Module):
 
 if __name__ == '__main__':
     config = CONFIG()
-    image = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], 1, "LR")
-    # image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
-    # print(image.shape)
-    # # print(image)
-    #
-    # sr = SRModel(config=config)
-    # image = np.transpose(image, (0, 3, 1, 2))
-    # image = torch.from_numpy(image)
-    # image = image.float()
-    # print(image.shape)
-    # image = torch.tensor(image)
+    lr_image = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], 21, "LR")
+    hr_image = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], 21, "HR")
 
-    sr = SRModel(config=config)
-    image = DataOp.ndarray2torch(image)
+    lr_image = lr_image.reshape((1, lr_image.shape[0], lr_image.shape[1], lr_image.shape[2]))
+    hr_image = hr_image.reshape((1, hr_image.shape[0], hr_image.shape[1], hr_image.shape[2]))
 
-    print(image.shape)
-    sr_output = sr(image)
-    print(sr_output.shape)
+    model = SRModel(config)
+
+    model.train_net(DataOp.ndarray2tensor(lr_image).to(model.device), DataOp.ndarray2tensor(hr_image).to(model.device))
 

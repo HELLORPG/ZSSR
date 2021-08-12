@@ -30,4 +30,19 @@ class CONFIG:
         self.DATASET = "BSDS100"     # 选择运行时的数据集
         self.SCALE_FACTOR = 2    # 超分辨率因子，一般是整数
 
+        # Train部分的参数
+        self.LEARN_RATE = 0.001
+        self.WEIGHT_DECAY = 0.0
+
+        self.INIT_EPOCH = 0
+        self.FINAL_EPOCH = None
+        self.MIN_LR = 0.000001  # 最低学习率，如果当前的学习率低于这个值，则停止学习
+
+        # 调试信息
+        self.PRINT_TRAIN_EPOCH = True    # 每一轮训练的输出
+
+        # 硬件信息
+        self.DEVICE = "cuda"
+
+
 

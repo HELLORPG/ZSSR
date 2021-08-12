@@ -1,4 +1,4 @@
-import PIL
+from PIL import Image
 import numpy as np
 import cv2
 import torch
@@ -23,7 +23,7 @@ def get_all_filenames_in_dir(dirpath: str) -> list:
     :param dirpath:
     :return:
     """
-    filenames = [filename for filename in os.listdir(dirpath) if os.path.isdir(os.path.join(dirpath, filename)) == False]
+    filenames = [filename for filename in os.listdir(dirpath) if os.path.isdir(os.path.join(dirpath, filename)) is False]
 
     return filenames
 
@@ -47,22 +47,33 @@ def read_BSDS100(dataset_path: str, index: int, type: str):
 
     filename = "img_" + filename + "_SRF_" + dataset_path[-1] + "_" + type + ".png"
 
-    # print(os.path.join(dataset_path, filename))
     return read_image(os.path.join(dataset_path, filename))
 
 
-def ndarray2torch(data):
+def ndarray2tensor(data):
     """
-    将opencv读取到的格式为(h,w,c)的数组转换为(n,c,h,w)
+    将opencv读取到的格式为(n,h,w,c)的数组转换为(n,c,h,w)
     :param data: opencv读到的ndarray数据
     :return: 适用输入torch网络的数据
     """
-    data = np.transpose(data, (2, 0, 1))
-    data = data.reshape((1, data.shape[0], data.shape[1], data.shape[2]))
+
+    data = np.transpose(data, (0, 3, 1, 2))
+    # data = data.reshape((1, data.shape[0], data.shape[1], data.shape[2]))
 
     data = torch.from_numpy(data).float()
 
     return data
+
+
+def show_ndarray_image(im):
+    """
+    展示一张以(h,w,c)存储的ndarray图像
+    :param image: ndarray which shape is (h,w,c)
+    :return:
+    """
+    im = Image.fromarray(im)
+    im.show()
+    return
 
 
 if __name__ == '__main__':
