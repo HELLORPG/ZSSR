@@ -26,6 +26,7 @@ def run_bsds100_a_image(model: SRModel, index: int, config=CONFIG()):
 
 if __name__ == '__main__':
     print(">>>>  ZSSR run.py begin")
+    print_system()
     config = CONFIG()   # 获得基准的config配置
 
     sr_model = SRModel(config)
