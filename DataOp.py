@@ -6,6 +6,7 @@ import torch
 from Config import CONFIG
 import os
 import random
+from torchvision.transforms import functional as F
 
 
 def read_image(filepath: str) -> np.ndarray:
@@ -152,12 +153,22 @@ def get_train_images(im: np.ndarray, size: int, scale_factor):
         lr_sons.append(lr_son)
 
     # show_ndarray_image(lr_sons[0])
+    # print(F.to_tensor(hr_fathers[0]).shape)
 
-    for i in range(0, 8):
-        hr_fathers[i] = hr_fathers[i].reshape((1, hr_fathers[i].shape[0], hr_fathers[i].shape[1], hr_fathers[i].shape[2]))
-        lr_sons[i] = lr_sons[i].reshape((1, lr_sons[i].shape[0], lr_sons[i].shape[1], lr_sons[i].shape[2]))
+    # for i in range(0, 8):
+    #     hr_fathers[i] = hr_fathers[i].reshape((1, hr_fathers[i].shape[0], hr_fathers[i].shape[1], hr_fathers[i].shape[2]))
+    #     lr_sons[i] = lr_sons[i].reshape((1, lr_sons[i].shape[0], lr_sons[i].shape[1], lr_sons[i].shape[2]))
 
-    lr_data = np.vstack((
+    # x = np.ones((2, 2, 3), dtype=np.uint8)
+    # print(type(x))
+    # x[1,1,2] = 10
+    # x = F.to_tensor(x)
+    # print(x)
+
+    lr_sons, hr_fathers = totensor_lr_hr(lr_sons, hr_fathers)
+    # print(lr_sons[0].shape)
+
+    lr_data = torch.stack((
         lr_sons[0],
         lr_sons[1],
         lr_sons[2],
@@ -166,9 +177,9 @@ def get_train_images(im: np.ndarray, size: int, scale_factor):
         lr_sons[5],
         lr_sons[6],
         lr_sons[7]
-    ))
+    ), dim=0)
 
-    hr_data = np.vstack((
+    hr_data = torch.stack((
         hr_fathers[0],
         hr_fathers[1],
         hr_fathers[2],
@@ -177,9 +188,17 @@ def get_train_images(im: np.ndarray, size: int, scale_factor):
         hr_fathers[5],
         hr_fathers[6],
         hr_fathers[7]
-    ))
+    ), dim=0)
 
-    return ndarray2tensor(lr_data), ndarray2tensor(hr_data)
+    # return ndarray2tensor(lr_data), ndarray2tensor(hr_data)
+    return lr_data, hr_data
+
+def totensor_lr_hr(lr: list, hr: list):
+    for i in range(0, len(lr)):
+        lr[i] = F.to_tensor(lr[i].astype(np.uint8))
+        hr[i] = F.to_tensor(hr[i].astype(np.uint8))
+
+    return lr, hr
 
 
 if __name__ == '__main__':
@@ -192,11 +211,6 @@ if __name__ == '__main__':
 
     image = read_BSDS100(config.BSDS100xN_PATH[2], 21, "LR")
 
-    # ds_image = get_hr_father(image, 64, 2)
-    #
-    # show_ndarray_image(image)
-    # show_ndarray_image(ds_image)
-    # random.seed(100)
     lr, hr = get_train_images(image, 64, 2)
     print(lr.shape)
 

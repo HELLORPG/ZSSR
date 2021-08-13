@@ -7,6 +7,7 @@ class CONFIG:
         # 各类路径的配置
         # Linux:
         if platform.system().lower() == "linux":
+            self.system = "linux"
             self.PROJECT_PATH = "/home/gaoruopeng/code/ZSSR"
             self.BSDS100_PATH = "/data0/gaoruopeng/BSDS100"     # BSDS100 数据集路径
             self.BSDS100xN_PATH = [
@@ -17,6 +18,7 @@ class CONFIG:
                 "/data0/gaoruopeng/BSDS100/image_SRF_4",
             ]
         else:
+            self.system = "windows"
             self.PROJECT_PATH = "D:/ResearchFile/Code/ZSSR"
             self.BSDS100_PATH = "D:/ResearchFile/Dataset/BSDS100"  # BSDS100 数据集路径
             self.BSDS100xN_PATH = [
