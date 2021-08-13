@@ -31,5 +31,6 @@ if __name__ == '__main__':
     sr_model = SRModel(config)
 
     run_bsds100_a_image(sr_model, 2, config=config)
+    # index=2, 30.166222309772564 0.9432615378365822
 
 

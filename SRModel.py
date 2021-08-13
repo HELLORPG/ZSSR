@@ -1,5 +1,5 @@
 import os
-
+import math
 import torch
 import torch.nn as nn
 from Config import CONFIG
@@ -43,6 +43,7 @@ class SRModel(nn.Module):
 
         # Something Else
         self.init_epoch = config.INIT_EPOCH
+        self.max_epoch = config.MAX_EPOCH
         self.current_lr = config.LEARN_RATE
         self.min_lr = config.MIN_LR
         self.print_train_epoch = config.PRINT_TRAIN_EPOCH
@@ -113,7 +114,8 @@ class SRModel(nn.Module):
         epoch = self.init_epoch
         while True:
             self.current_lr = self.optim.state_dict()['param_groups'][0]['lr']   # 获取当前的学习率
-            if self.current_lr < self.min_lr:
+            if self.current_lr < self.min_lr or epoch >= self.max_epoch:
+                # TODO 这里可以加入一个处理模型结束的函数
                 break
 
             # 进行正常的训练过程
@@ -175,13 +177,24 @@ class SRModel(nn.Module):
             self.loss_neighbor.append(current_loss.to("cpu").item())
 
             x = list(range(0, self.loss_neighbor_len))
-            for i in range(0, len(x)):
-                x[i] *= self.current_lr
+            # for i in range(0, len(x)):
+            #     x[i] *= self.current_lr
             # print(x)
             # print(x, self.loss_neighbor)
-            a = np.polyfit(x, self.loss_neighbor, 1)
-            k = abs(np.poly1d(a)[1])
-            std = np.std(self.loss_neighbor, ddof=1)
+
+            # 这是一种自己的算法
+            # a = np.polyfit(x, self.loss_neighbor, 1)
+            # k = abs(np.poly1d(a)[1])
+            # std = np.std(self.loss_neighbor, ddof=1)
+
+            # 替换成为原论文中采用的算法
+            [k, _], [[var, _], _] = np.polyfit(x, self.loss_neighbor, 1, cov=True)
+
+            std = math.sqrt(var)
+            k = abs(k)
+
+            # print(std, np.std(self.loss_neighbor))
+            # print(k)
 
             if std > k * self.lr_drop_when:
                 self.loss_neighbor.clear()
