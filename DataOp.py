@@ -190,6 +190,11 @@ def get_train_images(im: np.ndarray, size: int, scale_factor):
         hr_fathers[7]
     ), dim=0)
 
+    lr_data = (lr_data - 0.5) / 0.5
+    hr_data = (hr_data - 0.5) / 0.5
+
+    # print(lr_data)
+
     # return ndarray2tensor(lr_data), ndarray2tensor(hr_data)
     return lr_data, hr_data
 
