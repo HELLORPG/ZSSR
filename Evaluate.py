@@ -23,15 +23,25 @@ def evaluate_bsds100_a_image(dataset_path: str, index: int, method: str):
     psnr = peak_signal_noise_ratio(hr, sr)
     ssim = structural_similarity(hr, sr, multichannel=True)
 
-    print(psnr, ssim)
+    # print(psnr, ssim)
     return psnr, ssim
 
 
 
 if __name__ == '__main__':
     config = CONFIG()
+    method = "SRCNN"
+    psnr_sum, ssim_sum = 0.0, 0.0
     for i in range(1, 101):
-        psnr, ssim = evaluate_bsds100_a_image(config.BSDS100xN_PATH[2], 2, "SRCNN")
+        psnr, ssim = evaluate_bsds100_a_image(config.BSDS100xN_PATH[2], i, method)
+        psnr_sum += psnr
+        ssim_sum += ssim
+
+        print("%d Image: PSNR=%f, SSIM=%f" % (i, psnr, ssim))
+
+    print("Total: PSNR=%f, SSIM=%f" % (psnr_sum/100, ssim_sum/100))
+
+
 
 
 
