@@ -16,7 +16,9 @@ def print_system():
     print(">>>>  System is %s" % platform.system().lower())
 
 
-def run_bsds100_a_image(model: SRModel, index: int, config=CONFIG()):
+def run_bsds100_a_image(index: int, config=CONFIG()):
+    model = SRModel(config)
+
     lr_im = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], index, "LR")
     # print(lr_im.shape)
     hr_im = DataOp.read_BSDS100(config.BSDS100xN_PATH[2], index, "HR")
@@ -29,9 +31,11 @@ if __name__ == '__main__':
     print_system()
     config = CONFIG()   # 获得基准的config配置
 
-    sr_model = SRModel(config)
+    if config.system == "linux":
+        os.environ["CUDA_VISIBLE_DEVICES"] = config.GPU_ID
 
-    run_bsds100_a_image(sr_model, 2, config=config)
+    for i in range(0, 3):
+        run_bsds100_a_image(2, config=config)
     # index=2, 30.166222309772564 0.9432615378365822
 
 

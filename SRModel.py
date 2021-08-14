@@ -51,6 +51,7 @@ class SRModel(nn.Module):
         self.loss_neighbor_len = config.LOSS_NEIGHBOR_LEN
         self.lr_drop_when = config.LR_DROP_WHEN
         self.lr_drop_rate = config.LR_DROP_RATE
+        self.has_normalize = config.HAS_NORMALIZE
 
         # 优化器更新逻辑
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, 1, gamma=1 / self.lr_drop_rate, last_epoch=-1)
@@ -122,7 +123,7 @@ class SRModel(nn.Module):
             epoch += 1
 
             # 获得训练需要使用的数据
-            lr_data, hr_data = DataOp.get_train_images(lr_im, self.input_size, self.scale_factor)
+            lr_data, hr_data = DataOp.get_train_images(lr_im, self.input_size, self.scale_factor, has_normalize=self.has_normalize)
 
             loss = self._train(lr_data.to(self.device), hr_data.to(self.device), epoch)
             if self.need_drop_lr(loss):
@@ -143,10 +144,14 @@ class SRModel(nn.Module):
         lr_im = lr_im.reshape((1, lr_im.shape[0], lr_im.shape[1], lr_im.shape[2]))
         hr_im = hr_im.reshape((1, hr_im.shape[0], hr_im.shape[1], hr_im.shape[2]))
 
-        lr_im = (lr_im - 0.5) / 0.5
+        if self.has_normalize:
+            lr_im = (lr_im - 0.5) / 0.5
 
         sr_im = self._test(lr_im.to(self.device))
-        sr_im = sr_im * 0.5 + 0.5
+
+        if self.has_normalize:
+            sr_im = sr_im * 0.5 + 0.5
+
         sr_im = sr_im.cpu().numpy().reshape((sr_im.shape[1], sr_im.shape[2], sr_im.shape[3]))
         sr_im = np.transpose(sr_im, (1, 2, 0))
 
@@ -247,9 +252,6 @@ if __name__ == '__main__':
     # hr_image = hr_image.reshape((1, hr_image.shape[0], hr_image.shape[1], hr_image.shape[2]))
 
     model = SRModel(config)
-
-    # lr_images, hr_images = DataOp.get_train_images(lr_image, config.NET_IMAGE_SIZE, config.SCALE_FACTOR)
-    # print(lr_images.shape)
 
     model.train_net(lr_image, hr_image)
 

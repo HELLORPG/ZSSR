@@ -35,6 +35,7 @@ class CONFIG:
         # Train部分的参数
         self.LEARN_RATE = 0.001
         self.WEIGHT_DECAY = 0.0
+        self.HAS_NORMALIZE = False
 
         self.KERNEL_SIZE = 3
         self.PADDING = 1
@@ -47,7 +48,7 @@ class CONFIG:
         self.NET_IMAGE_SIZE = 128   # 网络最终输入的图像的大小
 
         self.LOSS_NEIGHBOR_LEN = 50
-        self.LR_DROP_WHEN = 1.5  # 如果标准差大于斜率*系数，则LR减少
+        self.LR_DROP_WHEN = 2  # 如果标准差大于斜率*系数，则LR减少
         self.LR_DROP_RATE = 10  # 学习率降低因子
 
         # 调试信息
@@ -55,6 +56,7 @@ class CONFIG:
 
         # 硬件信息
         self.DEVICE = "cuda"
+        self.GPU_ID = "4"
 
 
 

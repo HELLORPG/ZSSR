@@ -110,7 +110,7 @@ def get_hr_father(im: np.ndarray, min_size: int, scale_factor) -> np.ndarray:
     return hr_father
 
 
-def get_train_images(im: np.ndarray, size: int, scale_factor):
+def get_train_images(im: np.ndarray, size: int, scale_factor, has_normalize: bool):
     """
     通过一张输入图像，获得数据增强之后的网络训练输入图像群（8张）
     :param im: 输入的一张图像，应该是一张
@@ -190,8 +190,9 @@ def get_train_images(im: np.ndarray, size: int, scale_factor):
         hr_fathers[7]
     ), dim=0)
 
-    lr_data = (lr_data - 0.5) / 0.5
-    hr_data = (hr_data - 0.5) / 0.5
+    if has_normalize:
+        lr_data = (lr_data - 0.5) / 0.5
+        hr_data = (hr_data - 0.5) / 0.5
 
     # print(lr_data)
 

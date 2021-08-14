@@ -30,7 +30,8 @@ def evaluate_bsds100_a_image(dataset_path: str, index: int, method: str):
 
 if __name__ == '__main__':
     config = CONFIG()
-    evaluate_bsds100_a_image(config.BSDS100xN_PATH[2], 2, "bicubic")
+    for i in range(1, 101):
+        psnr, ssim = evaluate_bsds100_a_image(config.BSDS100xN_PATH[2], 2, "SRCNN")
 
 
 
