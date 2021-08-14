@@ -47,6 +47,7 @@ class SRModel(nn.Module):
         self.current_lr = config.LEARN_RATE
         self.min_lr = config.MIN_LR
         self.print_train_epoch = config.PRINT_TRAIN_EPOCH
+        self.print_eval_epoch = config.PRINT_EVAL_EPOCH
         self.loss_neighbor = []
         self.loss_neighbor_len = config.LOSS_NEIGHBOR_LEN
         self.lr_drop_when = config.LR_DROP_WHEN
@@ -62,8 +63,14 @@ class SRModel(nn.Module):
         self.input_size = config.NET_IMAGE_SIZE
 
         # 调试输出
+        self.index = config.INDEX
         timestamp = time.strftime("%Y_%m_%d+%H_%M_%S", time.localtime())
-        self.tb_writer = SummaryWriter(os.path.join(config.PROJECT_PATH, "tb_log/" + timestamp))
+        if self.index is None:
+            tb_path = os.path.join(os.path.join(config.PROJECT_PATH, config.TB_LOG_DIR), timestamp)
+        else:
+            tb_path = os.path.join(os.path.join(config.PROJECT_PATH, config.TB_LOG_DIR), "No." + str(self.index) + "_" + timestamp)
+        # os.mkdir(tb_path)
+        self.tb_writer = SummaryWriter(tb_path)
 
         self.to(self.device)
 
@@ -110,6 +117,12 @@ class SRModel(nn.Module):
         return loss
 
     def train_net(self, lr_im, hr_im):
+        """
+        训练整个网络
+        :param lr_im: 数据集中的LR Image
+        :param hr_im: 数据集中的HR Image，这部分不用于训练，只用于评估网络
+        :return:
+        """
         # ZSSR网络使用的训练并不是固定Epoch的，而是以训练过程中的lr动态调整作为判定依据的
         # 如果在lr的动态递减过程中，lr低于某一个值，则停止学习
         epoch = self.init_epoch
@@ -117,6 +130,7 @@ class SRModel(nn.Module):
             self.current_lr = self.optim.state_dict()['param_groups'][0]['lr']   # 获取当前的学习率
             if self.current_lr < self.min_lr or epoch >= self.max_epoch:
                 # TODO 这里可以加入一个处理模型结束的函数
+                return self.evaluate_net(lr_im=lr_im, hr_im=hr_im, epoch=epoch+1)
                 break
 
             # 进行正常的训练过程
@@ -138,7 +152,7 @@ class SRModel(nn.Module):
             sr_im = self.forward(lr_im)
         return sr_im
 
-    def evaluate_net(self, lr_im, hr_im, epoch=0):
+    def evaluate_net(self, lr_im, hr_im, epoch=0) -> [float, float]:
         lr_im = F.to_tensor(lr_im)
         hr_im = F.to_tensor(hr_im)
         lr_im = lr_im.reshape((1, lr_im.shape[0], lr_im.shape[1], lr_im.shape[2]))
@@ -167,9 +181,15 @@ class SRModel(nn.Module):
         psnr = peak_signal_noise_ratio(hr_im, sr_im)
         ssim = structural_similarity(hr_im, sr_im, multichannel=True)
         # print(psnr, ssim)
-        print(">>>>>>  Test Epoch %d: PSNR=%f, SSIM=%f" % (epoch, psnr, ssim))
+        if self.print_eval_epoch:
+            print(">>>>>>  Test Epoch %d: PSNR=%f, SSIM=%f" % (epoch, psnr, ssim))
+        else:
+            if epoch % 100 == 0:
+                print(">>>>>>  Test Epoch %d: PSNR=%f, SSIM=%f" % (epoch, psnr, ssim))
         self.tb_writer.add_scalar("PSNR", psnr, global_step=epoch)
         self.tb_writer.add_scalar("SSIM", ssim, global_step=epoch)
+
+        return psnr, ssim
 
 
 

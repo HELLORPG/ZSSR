@@ -35,7 +35,7 @@ class CONFIG:
         # Train部分的参数
         self.LEARN_RATE = 0.001
         self.WEIGHT_DECAY = 0.0
-        self.HAS_NORMALIZE = False
+        self.HAS_NORMALIZE = True
 
         self.KERNEL_SIZE = 3
         self.PADDING = 1
@@ -52,11 +52,12 @@ class CONFIG:
         self.LR_DROP_RATE = 10  # 学习率降低因子
 
         # 调试信息
-        self.PRINT_TRAIN_EPOCH = True    # 每一轮训练的输出
+        self.PRINT_TRAIN_EPOCH = False    # 每一轮训练的输出
+        self.PRINT_EVAL_EPOCH = False
+        self.TB_LOG_DIR = "tb_log/2021.8.14_2"
+        self.INDEX = None
 
         # 硬件信息
         self.DEVICE = "cuda"
-        self.GPU_ID = "4"
-
-
+        self.GPU_ID = "6"
 
