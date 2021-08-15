@@ -61,6 +61,8 @@ class SRModel(nn.Module):
 
         # 数据的设置
         self.input_size = config.NET_IMAGE_SIZE
+        self.mean = None
+        self.std = None
 
         # 调试输出
         self.index = config.INDEX
@@ -126,6 +128,7 @@ class SRModel(nn.Module):
         # ZSSR网络使用的训练并不是固定Epoch的，而是以训练过程中的lr动态调整作为判定依据的
         # 如果在lr的动态递减过程中，lr低于某一个值，则停止学习
         epoch = self.init_epoch
+        self.mean, self.std = DataOp.get_mean_std(lr_im)
         while True:
             self.current_lr = self.optim.state_dict()['param_groups'][0]['lr']   # 获取当前的学习率
             if self.current_lr < self.min_lr or epoch >= self.max_epoch:
@@ -159,14 +162,17 @@ class SRModel(nn.Module):
         hr_im = hr_im.reshape((1, hr_im.shape[0], hr_im.shape[1], hr_im.shape[2]))
 
         if self.has_normalize:
-            lr_im = (lr_im - 0.5) / 0.5
+            # lr_im = (lr_im - 0.5) / 0.5
+            lr_im = F.normalize(lr_im, self.mean, self.std)
 
         sr_im = self._test(lr_im.to(self.device))
 
-        if self.has_normalize:
-            sr_im = sr_im * 0.5 + 0.5
-
         sr_im = sr_im.cpu().numpy().reshape((sr_im.shape[1], sr_im.shape[2], sr_im.shape[3]))
+
+        if self.has_normalize:
+            # sr_im = sr_im * 0.5 + 0.5
+            sr_im = DataOp.de_normalize(sr_im, self.mean, self.std)
+
         sr_im = np.transpose(sr_im, (1, 2, 0))
 
         hr_im = hr_im.cpu().numpy().reshape((hr_im.shape[1], hr_im.shape[2], hr_im.shape[3]))
@@ -248,6 +254,7 @@ class ConvLayer(nn.Module):
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=0, bias=False)
 
         # 没有加入BN层
+        self.bn = nn.BatchNorm2d(num_features=out_channels)
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -256,6 +263,8 @@ class ConvLayer(nn.Module):
     def forward(self, input):
         output = self.pad(input)
         output = self.conv(output)
+
+        # output = self.bn(output)
 
         if self.has_relu is True:
             output = self.relu(output)

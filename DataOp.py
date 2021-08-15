@@ -110,13 +110,15 @@ def get_hr_father(im: np.ndarray, min_size: int, scale_factor) -> np.ndarray:
     return hr_father
 
 
-def get_train_images(im: np.ndarray, size: int, scale_factor, has_normalize: bool):
+def get_train_images(im: np.ndarray, size: int, scale_factor, has_normalize: bool, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]):
     """
     通过一张输入图像，获得数据增强之后的网络训练输入图像群（8张）
     :param im: 输入的一张图像，应该是一张
     :param size: 最终输入网络的图像尺寸
     :return:
     """
+    # get_mean_std(im)
+
     hr_fathers = []
 
     hr_father = get_hr_father(im, size, scale_factor)
@@ -152,19 +154,6 @@ def get_train_images(im: np.ndarray, size: int, scale_factor, has_normalize: boo
         lr_son = cv2.resize(hr_father, dsize=(size, size), interpolation=cv2.INTER_CUBIC)
         lr_sons.append(lr_son)
 
-    # show_ndarray_image(lr_sons[0])
-    # print(F.to_tensor(hr_fathers[0]).shape)
-
-    # for i in range(0, 8):
-    #     hr_fathers[i] = hr_fathers[i].reshape((1, hr_fathers[i].shape[0], hr_fathers[i].shape[1], hr_fathers[i].shape[2]))
-    #     lr_sons[i] = lr_sons[i].reshape((1, lr_sons[i].shape[0], lr_sons[i].shape[1], lr_sons[i].shape[2]))
-
-    # x = np.ones((2, 2, 3), dtype=np.uint8)
-    # print(type(x))
-    # x[1,1,2] = 10
-    # x = F.to_tensor(x)
-    # print(x)
-
     lr_sons, hr_fathers = totensor_lr_hr(lr_sons, hr_fathers)
     # print(lr_sons[0].shape)
 
@@ -191,8 +180,10 @@ def get_train_images(im: np.ndarray, size: int, scale_factor, has_normalize: boo
     ), dim=0)
 
     if has_normalize:
-        lr_data = (lr_data - 0.5) / 0.5
-        hr_data = (hr_data - 0.5) / 0.5
+        lr_data = F.normalize(lr_data, mean, std)
+        hr_data = F.normalize(hr_data, mean, std)
+        # lr_data = (lr_data - 0.5) / 0.5
+        # hr_data = (hr_data - 0.5) / 0.5
 
     # print(lr_data)
 
@@ -205,6 +196,35 @@ def totensor_lr_hr(lr: list, hr: list):
         hr[i] = F.to_tensor(hr[i].astype(np.uint8))
 
     return lr, hr
+
+
+def get_mean_std(image: np.ndarray):
+    image = F.to_tensor(image)
+
+    channels = []
+    for i in range(0, 3):
+        channels.append(image[i, :, :].cpu().numpy())
+
+    mean, std = [], []
+    for channel in channels:
+        mean.append(np.mean(channel))
+        std.append(np.std(channel))
+
+    return mean, std
+
+
+def de_normalize(image: torch.tensor, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]):
+    """
+    反归一化
+    :param image:
+    :param mean:
+    :param std:
+    :return:
+    """
+    for i in range(0, 3):
+        image[i, :, :] = image[i, :, :] * std[i] + mean[i]
+
+    return image
 
 
 if __name__ == '__main__':
