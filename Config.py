@@ -45,19 +45,19 @@ class CONFIG:
         self.MAX_EPOCH = 3000
         self.MIN_LR = 0.000001  # 最低学习率，如果当前的学习率低于这个值，则停止学习
 
-        self.NET_IMAGE_SIZE = 200   # 网络最终输入的图像的大小
+        self.NET_IMAGE_SIZE = 128   # 网络最终输入的图像的大小
 
         self.LOSS_NEIGHBOR_LEN = 40
         self.LR_DROP_WHEN = 4  # 如果标准差大于斜率*系数，则LR减少
         self.LR_DROP_RATE = 4  # 学习率降低因子
 
         # 调试信息
-        self.PRINT_TRAIN_EPOCH = True    # 每一轮训练的输出
-        self.PRINT_EVAL_EPOCH = True
-        self.TB_LOG_DIR = "tb_log/large_round2"
+        self.PRINT_TRAIN_EPOCH = False    # 每一轮训练的输出
+        self.PRINT_EVAL_EPOCH = False
+        self.TB_LOG_DIR = "tb_log/round3"
         self.INDEX = None
 
         # 硬件信息
         self.DEVICE = "cuda"
-        self.GPU_ID = "6"
+        self.GPU_ID = "5"
 
