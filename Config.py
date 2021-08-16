@@ -33,7 +33,7 @@ class CONFIG:
         self.SCALE_FACTOR = 2    # 超分辨率因子，一般是整数
 
         # Train部分的参数
-        self.LEARN_RATE = 0.004
+        self.LEARN_RATE = 0.002
         self.WEIGHT_DECAY = 0.000
         self.HAS_NORMALIZE = True
 
@@ -47,17 +47,22 @@ class CONFIG:
 
         self.NET_IMAGE_SIZE = 128   # 网络最终输入的图像的大小
 
-        self.LOSS_NEIGHBOR_LEN = 40
-        self.LR_DROP_WHEN = 4  # 如果标准差大于斜率*系数，则LR减少
+        self.LOSS_NEIGHBOR_LEN = 60
+        self.LR_DROP_WHEN = 2  # 如果标准差大于斜率*系数，则LR减少
         self.LR_DROP_RATE = 4  # 学习率降低因子
 
         # 调试信息
-        self.PRINT_TRAIN_EPOCH = False    # 每一轮训练的输出
-        self.PRINT_EVAL_EPOCH = False
-        self.TB_LOG_DIR = "tb_log/round3"
+        self.PRINT_TRAIN_EPOCH = True    # 每一轮训练的输出
+        self.PRINT_EVAL_EPOCH = True
+        self.TB_LOG_DIR = "tb_log"
         self.INDEX = None
 
         # 硬件信息
         self.DEVICE = "cuda"
-        self.GPU_ID = "5"
+        self.GPU_ID = "4"
+
+        # 评估部分的设置
+        self.EVAL_EVERY_EPOCH = True
+        self.BACK_PROJECTION = True
+        self.BACK_PROJECTION_TIMES = 5
 

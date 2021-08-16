@@ -1,5 +1,7 @@
 import os
 import math
+
+import skimage.transform
 import torch
 import torch.nn as nn
 from Config import CONFIG
@@ -73,6 +75,11 @@ class SRModel(nn.Module):
             tb_path = os.path.join(os.path.join(config.PROJECT_PATH, config.TB_LOG_DIR), "No." + str(self.index) + "_" + timestamp)
         # os.mkdir(tb_path)
         self.tb_writer = SummaryWriter(tb_path)
+        self.eval_every_epoch = config.EVAL_EVERY_EPOCH
+
+        # 结果增强
+        self.has_back_projection = config.BACK_PROJECTION
+        self.back_projection_times = config.BACK_PROJECTION_TIMES
 
         self.to(self.device)
 
@@ -133,8 +140,9 @@ class SRModel(nn.Module):
             self.current_lr = self.optim.state_dict()['param_groups'][0]['lr']   # 获取当前的学习率
             if self.current_lr < self.min_lr or epoch >= self.max_epoch:
                 # TODO 这里可以加入一个处理模型结束的函数
-                return self.evaluate_net(lr_im=lr_im, hr_im=hr_im, epoch=epoch+1)
-                break
+                # return self.evaluate_net(lr_im=lr_im, hr_im=hr_im, epoch=epoch+1)
+                return self.final_evaluate(lr_im, hr_im, epoch)
+                # break
 
             # 进行正常的训练过程
             epoch += 1
@@ -145,8 +153,8 @@ class SRModel(nn.Module):
             loss = self._train(lr_data.to(self.device), hr_data.to(self.device), epoch)
             if self.need_drop_lr(loss):
                 self.scheduler.step()
-
-            self.evaluate_net(lr_im, hr_im, epoch=epoch)
+            if self.eval_every_epoch:
+                self.evaluate_net(lr_im, hr_im, epoch=epoch)
         return
 
     def _test(self, lr_im):
@@ -156,6 +164,15 @@ class SRModel(nn.Module):
         return sr_im
 
     def evaluate_net(self, lr_im, hr_im, epoch=0) -> [float, float]:
+        """
+        训练过程中的评估函数，并没有对八个结果中的像素取中位数，相当于没有进行这一步增强。
+        :param lr_im: 数据集中的LR图像
+        :param hr_im: 数据集中的HR图像
+        :param epoch: 当前的轮数
+        :return:
+        """
+        lr_copy = lr_im
+        hr_copy = hr_im
         lr_im = F.to_tensor(lr_im)
         hr_im = F.to_tensor(hr_im)
         lr_im = lr_im.reshape((1, lr_im.shape[0], lr_im.shape[1], lr_im.shape[2]))
@@ -195,9 +212,117 @@ class SRModel(nn.Module):
         self.tb_writer.add_scalar("PSNR", psnr, global_step=epoch)
         self.tb_writer.add_scalar("SSIM", ssim, global_step=epoch)
 
+        # if epoch % 100 == 0:
+        #     print(self.final_evaluate(lr_copy, hr_copy, epoch))
+
         return psnr, ssim
 
 
+    def final_evaluate(self, lr_im: np.ndarray, hr_im: np.ndarray, epoch: int, save_img=False):
+        """
+        进行一个综合的评估，这次评估包括了对结果数据的增强等等。
+        :param lr_im:
+        :param hr_im:
+        :param epoch:
+        :param save_img: 是否保存最终SR之后的图像
+        :return:
+        """
+        lr_images = []  # 存储经过数据增强之后的八张图像
+
+        # 进行数据增强，通过旋转和镜像得到8张图像
+        for i in range(0, 8):
+            lr_images.append(np.rot90(lr_im, int(i / 2)))
+            if i % 2 == 1:  # 此时进行镜像
+                lr_images[i] = np.flipud(lr_images[i])
+
+        # 转换成为Tensor
+        for i in range(0, 8):
+            lr_images[i] = F.to_tensor(lr_images[i].copy())
+
+        # 是否进行标准化
+        if self.has_normalize:
+            for i in range(0, 8):
+                lr_images[i] = F.normalize(lr_images[i], self.mean, self.std)
+
+        # 循环训练得到所有的SR输出结果
+        sr_images = []
+        for i in range(0, 8):
+            sr_images.append(self._test(lr_images[i].reshape((1, lr_images[i].shape[0], lr_images[i].shape[1], lr_images[i].shape[2])).to(self.device)))
+            # 输出的sr_images是(1,c,h,w)格式
+            sr_images[i] = sr_images[i].reshape((sr_images[i].shape[1], sr_images[i].shape[2], sr_images[i].shape[3]))
+
+        # 将Tensor的输出转换为Numpy
+        for i in range(0, 8):
+            sr_images[i] = sr_images[i].cpu().numpy()
+
+        # 进行逆标准化
+        if self.has_normalize:
+            for i in range(0, 8):
+                sr_images[i] = DataOp.de_normalize(sr_images[i], mean=self.mean, std=self.std)
+
+        # 更改成为(h,w,c)
+        for i in range(0, 8):
+            sr_images[i] = np.transpose(sr_images[i], (1, 2, 0))
+
+        # 对HR图像进行相似的处理
+        hr_im = F.to_tensor(hr_im)  # 归一化
+        hr_im = hr_im.cpu().numpy()     # 转换成为Numpy
+        hr_im = np.transpose(hr_im, (1, 2, 0)) # 调整为(h,w,c)
+
+        # 对颜色系统进行调整
+        for i in range(0, 8):
+            sr_images[i] = cv2.cvtColor(sr_images[i], cv2.COLOR_BGR2RGB)
+        hr_im = cv2.cvtColor(hr_im, cv2.COLOR_BGR2RGB)
+
+        # 对之前旋转和镜像进行复原
+        for i in range(0, 8):
+            if i % 2 == 1:
+                sr_images[i] = np.flipud(sr_images[i])
+            sr_images[i] = np.rot90(sr_images[i], -int(i/2))
+
+        # 对八种方向和镜像得到的SR图像进行合并处理
+        sr_im = np.zeros_like(sr_images[0])
+        for h in range(0, sr_images[0].shape[0]):
+            for w in range(0, sr_images[0].shape[1]):
+                for c in range(0, sr_images[0].shape[2]):
+                    x = []
+                    for i in range(0, 8):
+                        x.append(sr_images[i][h,w,c])
+                    x_new = np.median(x)
+                    # x_new = np.mean(x)
+                    sr_im[h,w,c] = x_new
+
+        # 对SR进行迭代修正
+        if self.has_back_projection:
+            lr_im = F.to_tensor(lr_im.copy())
+            lr_im = lr_im.cpu().numpy()
+            lr_im = np.transpose(lr_im, (1, 2, 0))
+            lr_im = cv2.cvtColor(lr_im, cv2.COLOR_BGR2RGB)
+            sr_im = self.back_projection(lr_im, sr_im, self.scale_factor, self.back_projection_times)
+
+        # 对SR进行(0,1)修正
+        sr_im = np.clip(sr_im, 0, 1)
+
+        # 评估SR和HR的差距
+        psnr = peak_signal_noise_ratio(hr_im, sr_im)
+        ssim = structural_similarity(hr_im, sr_im, multichannel=True)
+
+        return psnr, ssim
+
+    def back_projection(self, lr_im: np.ndarray, sr_im: np.ndarray, scale_factor, times: int):
+        """
+        数据增强
+        :param im: 需要增强的图像
+        :param scale_factor: 缩放的倍数
+        :param times: 进行增强的次数
+        :return:
+        """
+        # h, w = im.shape[0], im.shape[1]
+        # h1, w1 = round(h/scale_factor), round(w/scale_factor)
+        for i in range(0, times):
+            sr_im += cv2.resize(lr_im -
+                                cv2.resize(sr_im, (lr_im.shape[1], lr_im.shape[0])), (sr_im.shape[1], sr_im.shape[0]))
+        return sr_im
 
     def need_drop_lr(self, current_loss) -> bool:
         if len(self.loss_neighbor) < self.loss_neighbor_len:

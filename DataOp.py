@@ -227,6 +227,9 @@ def de_normalize(image: torch.tensor, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     return image
 
 
+# def back_projection()
+
+
 if __name__ == '__main__':
     config = CONFIG()
     test_image_path = os.path.join(config.BSDS100xN_PATH[2], "img_001_SRF_2_LR.png")

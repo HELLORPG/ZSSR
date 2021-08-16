@@ -48,14 +48,18 @@ if __name__ == '__main__':
 
     if config.system == "linux":
         os.environ["CUDA_VISIBLE_DEVICES"] = config.GPU_ID
+    # 根据SFY说，这样可以加快CPU高占用的运行
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ["OMP_NUM_THREADS"] = "1"
 
     # for i in range(0, 3):
     #     run_bsds100_a_image(2, config=config)
     # index=2, 30.166222309772564 0.9432615378365822
 
-    # print(run_bsds100_a_image(2, config=config))
+    print(run_bsds100_a_image(2, config=config))
 
-    run_bsds100_images()
+    # run_bsds100_images()
 
 
 
