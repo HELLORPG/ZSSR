@@ -80,6 +80,7 @@ class SRModel(nn.Module):
         # 结果增强
         self.has_back_projection = config.BACK_PROJECTION
         self.back_projection_times = config.BACK_PROJECTION_TIMES
+        self.combine_method = config.COMBINE_METHOD
 
         self.to(self.device)
 
@@ -288,8 +289,10 @@ class SRModel(nn.Module):
                     x = []
                     for i in range(0, 8):
                         x.append(sr_images[i][h,w,c])
-                    x_new = np.median(x)
-                    # x_new = np.mean(x)
+                    if self.combine_method == "median":
+                        x_new = np.median(x)
+                    else:
+                        x_new = np.mean(x)
                     sr_im[h,w,c] = x_new
 
         # 对SR进行迭代修正

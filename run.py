@@ -57,9 +57,9 @@ if __name__ == '__main__':
     #     run_bsds100_a_image(2, config=config)
     # index=2, 30.166222309772564 0.9432615378365822
 
-    print(run_bsds100_a_image(2, config=config))
+    # print(run_bsds100_a_image(2, config=config))
 
-    # run_bsds100_images()
+    run_bsds100_images()
 
 
 
