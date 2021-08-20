@@ -39,7 +39,7 @@ class SRModel(nn.Module):
 
         # Loss函数
         self.loss_func = nn.L1Loss()
-
+        # self.loss_func = nn.MSELoss()
         # 定义网络的优化器
         self.optim = torch.optim.Adam(self.parameters(), lr=config.LEARN_RATE, weight_decay=config.WEIGHT_DECAY)
 
@@ -310,6 +310,16 @@ class SRModel(nn.Module):
         psnr = peak_signal_noise_ratio(hr_im, sr_im)
         ssim = structural_similarity(hr_im, sr_im, multichannel=True)
 
+        # save_img = True
+        if save_img:
+            # 如果需要保存图像
+            sr_im = cv2.cvtColor(sr_im, cv2.COLOR_RGB2BGR)
+            # sr_im = int(sr_im * 256)
+            sr_im = np.multiply(sr_im, 256)
+            sr_im = sr_im.astype(int)
+            cv2.imwrite("output/test.png", sr_im)
+
+
         return psnr, ssim
 
     def back_projection(self, lr_im: np.ndarray, sr_im: np.ndarray, scale_factor, times: int):
@@ -324,7 +334,7 @@ class SRModel(nn.Module):
         # h1, w1 = round(h/scale_factor), round(w/scale_factor)
         for i in range(0, times):
             sr_im += cv2.resize(lr_im -
-                                cv2.resize(sr_im, (lr_im.shape[1], lr_im.shape[0])), (sr_im.shape[1], sr_im.shape[0]))
+                                cv2.resize(sr_im, (lr_im.shape[1], lr_im.shape[0])), (sr_im.shape[1], sr_im.shape[0]), interpolation=cv2.INTER_LANCZOS4)
         return sr_im
 
     def need_drop_lr(self, current_loss) -> bool:

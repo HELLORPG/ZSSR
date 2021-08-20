@@ -39,13 +39,14 @@ class CONFIG:
 
         self.KERNEL_SIZE = 3
         self.PADDING = 1
-        self.PADDING_MODE = "replication"
+        # self.PADDING_MODE = "replication"
+        self.PADDING_MODE = "reflection"
 
         self.INIT_EPOCH = 0
         self.MAX_EPOCH = 3000
         self.MIN_LR = 0.000001  # 最低学习率，如果当前的学习率低于这个值，则停止学习
 
-        self.NET_IMAGE_SIZE = 140   # 网络最终输入的图像的大小
+        self.NET_IMAGE_SIZE = 120   # 网络最终输入的图像的大小
 
         self.LOSS_NEIGHBOR_LEN = 40
         self.LR_DROP_WHEN = 2  # 如果标准差大于斜率*系数，则LR减少
@@ -54,12 +55,12 @@ class CONFIG:
         # 调试信息
         self.PRINT_TRAIN_EPOCH = False    # 每一轮训练的输出
         self.PRINT_EVAL_EPOCH = False
-        self.TB_LOG_DIR = "tb_log/bp_3"
+        self.TB_LOG_DIR = "tb_log/new_6"
         self.INDEX = None
 
         # 硬件信息
         self.DEVICE = "cuda"
-        self.GPU_ID = "3"
+        self.GPU_ID = "4"
 
         # 评估部分的设置
         self.EVAL_EVERY_EPOCH = False

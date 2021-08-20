@@ -89,7 +89,7 @@ def get_hr_father(im: np.ndarray, min_size: int, scale_factor) -> np.ndarray:
 
     # 获得一个降采样的因子
     # TODO 这里应该会有更好的采样方式，原论文中强调，这里原文中强调，约接近原图大小的HR-Father将更有概率被选中，也即是一个不均匀的采样，而我这里的采样是均匀的，其实是有一定的偏差的。
-    downsample_factor = random.uniform(0.8, 1.0)
+    downsample_factor = 1 - random.uniform(0.0, 0.5) * random.uniform(0.0, 0.5)
 
     h, w = im.shape[0], im.shape[1]
     h1, w1 = round(h * downsample_factor), round(w * downsample_factor)
